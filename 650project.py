@@ -33,8 +33,8 @@ with open("plot_summaries.txt",'r') as myfile:
         movie_id.append(line.split('\t')[0])
         head.append(line.split('\t')[1])
 #document,topic number setup
-topic_number_setup = 5
-document_setup = 100
+topic_number_setup = 20
+document_setup = 40000
 
 synopses = head[:document_setup]
 selected_id = movie_id[:document_setup]
