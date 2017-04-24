@@ -1,3 +1,6 @@
+# ---------------------
+# by Yidan Zhu
+# ---------------------
 import numpy as np
 import pandas as pd
 import nltk
@@ -19,7 +22,7 @@ from itertools import chain
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-##LDA loop time setup
+# LDA loop time setup
 SOME_FIXED_SEED = 42
 np.random.seed(SOME_FIXED_SEED)
 
@@ -32,29 +35,22 @@ with open("plot_summaries.txt",'r') as myfile:
     for line in myfile:
         movie_id.append(line.split('\t')[0])
         head.append(line.split('\t')[1])
-#document,topic number setup
+# document,topic number setup
 topic_number_setup = 20
 document_setup = 40000
 
 synopses = head[:document_setup]
 selected_id = movie_id[:document_setup]
 
-# def tokenize_and_stem(text):
-#     #first tokenize by sentence, then by word to ensure that punctuation is caught as it's own token
-#     tokens = [word for sent in nltk.sent_tokenize(text) for word in nltk.word_tokenize(sent)]
-#     filtered_tokens = []
-#     #filter out any tokens not containing letters (e.g., numeric tokens, raw punctuation)
-#     for token in tokens:
-#         if re.search('[a-zA-Z]', token):
-#             filtered_tokens.append(token)
-#     stems = [stemmer.stem(t) for t in filtered_tokens]
-#     return stems
-
+# ----------------------------
+#    Code citation:
+#    Author: Brandon Rose
+#    Availability: http://brandonrose.org/clustering by Brandon Rose
+#  ----------------------------
 def strip_proppers(text):
     # first tokenize by sentence, then by word to ensure that punctuation is caught as it's own token
     tokens = [word for sent in nltk.sent_tokenize(text.decode('utf-8')) for word in nltk.word_tokenize(sent) if word.islower()]
     return "".join([" "+i if not i.startswith("'") and i not in string.punctuation else i for i in tokens]).strip()
-
 
 def strip_proppers_POS(text):
     tagged = pos_tag(text.split()) #use NLTK's part of speech tagger
@@ -65,45 +61,39 @@ def strip_proppers_POS(text):
 #remove proper names
 preprocess = [strip_proppers(doc) for doc in synopses]
 
-#tokenize
+# tokenize
 tokenized_text = [strip_proppers_POS(text) for text in preprocess]
-#tokenized_text = [tokenize_and_stem(text) for text in preprocess]
 
-#remove stop words
+# remove stop words
 texts = [[word for word in text if word not in stopwords] for text in tokenized_text]
-#keep words that only contains letters
+# keep words that only contains letters
 texts = [[word for word in text if re.match('[a-zA-Z]+', word)]for text in texts]
 
-#create a Gensim dictionary from the texts
+# create a Gensim dictionary from the texts
 dictionary = corpora.Dictionary(texts)
 
-#remove extremes no_below 1 appearance, no above 0.8 percent of corpus
+# remove extremes no_below 1 appearance, no above 0.8 percent of corpus
 dictionary.filter_extremes(no_below=1, no_above=0.8)
 
-#convert the dictionary to a bag of words corpus for reference
+# convert the dictionary to a bag of words corpus for reference
 corpus = [dictionary.doc2bow(text) for text in texts]
 
-#convert the dictionary to a bag of words corpus for reference
+# convert the dictionary to a bag of words corpus for reference
 lda = models.LdaModel(corpus, num_topics=topic_number_setup,
                             id2word=dictionary,
                             minimum_probability=0.05
-                            # update_every=5,
-                            # chunksize=10000,
-                            # passes=20
                             )
-##### for each movie in corpus, give topic and probability(>0.01)
+# For each movie in corpus, give topic and probability(>0.01)
 lda_corpus = lda[corpus]
 
-
-
-######doc topic matrix: [document index, [topic,probability],document id, document content]
+# Doc topic matrix: [document index, [topic,probability],document id, document content]
 doc_topic_mat = zip(range(0,document_setup),lda_corpus,selected_id,synopses)
 
-###### matrix of words in topic
+# matrix of words in topic
 topics_matrix = lda.show_topics(num_topics=topic_number_setup,num_words=10, log=False, formatted=True)
 topics_matrix = np.array(topics_matrix)
 
-#for each topic and each document, give probability
+# For each topic and each document, give probability
 cluster1 = []
 for k,i,j,l in doc_topic_mat:
     for x in i :
@@ -111,37 +101,36 @@ for k,i,j,l in doc_topic_mat:
         # append [(topic, probability),document id] to cluster1
         cluster1.append((x,j,l))
 
-###### Save topics
+# Save topics
 with open('lda_topic.txt','w') as file:
     for i in lda.show_topics(num_topics=topic_number_setup):
         file.write(str(i)+'\n')
 
-##### topic cluster visualization
-##### topic term relation json save
+# topic cluster visualization
+# topic term relation json save
 movies = pyLDAvis.gensim.prepare(lda,corpus, dictionary)
 pyLDAvis.save_html(movies, 'LDA_Visualization.html')
 
-######Topic-term relationship matrix
+# Topic-Term relationship matrix
 pyLDAvis.save_json(movies, 'topic_term.json')
 with open('topic_term.json') as json_data:
     d = json.load(json_data)
 mat = np.column_stack(( d['token.table']['Topic'], d['token.table']['Freq'],d['token.table']['Term']))
 
-##### load movie metadata:
+# load movie metadata:
 meta_dict = {}
 with open("movie.metadata.tsv") as tsvfile:
     tsvreader = csv.reader(tsvfile, delimiter="\t")
     for line in tsvreader:
         meta_dict[line[0]] = line[2]
 
-####Enable topic document search
+# Enable topic document search
 def enable_search():
     query = raw_input('Enter your search query: ')
-    #method one
     test_doc =query.split()
     doc_bow = dictionary.doc2bow(test_doc)
     output = lda[doc_bow]
-    #print output
+
     #show topic words
     print 'Query topic relationship:'
     for n in output:
@@ -154,7 +143,7 @@ def enable_search():
     topic_number = int(raw_input('Choose your topic: '))
     document_probability = []
     for i in cluster1:
-        #print i[0],i[1]
+
         if int(i[0][0]) == topic_number:
                 document_probability.append((i[0][1],i[1]))
     sort_doc = sorted(document_probability, key = lambda x:x[0],reverse = True)
@@ -169,51 +158,3 @@ def enable_search():
     if user_choose == 'Yes':
         enable_search()
 enable_search()
-
-
-
-
-# ##############################Used methods################################################
-
-# ##### Print topic belonging of documents
-# # index = 0
-# # for i in corpus[1:10]:
-# #     print index
-# #     index +=1
-# #     print lda[i]
-
-##### New document, topic prediction
-# test_doc ='father mother and me.'.split()
-# doc_bow = dictionary.doc2bow(test_doc)
-# print lda[doc_bow]
-
-
-# ##### setup threshold ? or use 0.01
-# # scores = list(chain(*[[score for topic_id,score in topic] \
-# #                       for topic in [doc for doc in lda_corpus]]))
-# # threshold = sum(scores)/len(scores)
-# # print threshold
-#
-#
-# ##### New movie Classification
-# ##### Classification one movie outside
-# #transfer to bag-of-word
-# # for i in range(101,105):
-# #     print i
-# #     test_doc = list(head[i].decode('utf-8'))
-# #     doc_bow = dictionary.doc2bow(test_doc)
-# #     doc_lda = lda[doc_bow]
-# #     print doc_lda
-#
-# ##### Classification cluster of movies, document belonging
-# #
-# # def get_doc_topics(lda, bow):
-# #     gamma, _ = lda.inference([bow]) #gamma is the unnormalised topic scores per document
-# #     topic_dist = gamma[0] / sum(gamma[0])  # normalize distribution
-# #     print topic_dist
-# #     #return [(topicid, topicvalue) for topicid, topicvalue in enumerate(topic_dist)]
-# #
-# # for i in range(100,101):
-# #     test_doc=list(head[i].decode('utf-8'))
-# #     doc_bow = dictionary.doc2bow(test_doc)
-# #     print get_doc_topics(lda, doc_bow)
