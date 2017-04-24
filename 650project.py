@@ -46,7 +46,7 @@ selected_id = movie_id[:document_setup]
 #    Code citation:
 #    Author: Brandon Rose
 #    Availability: http://brandonrose.org/clustering by Brandon Rose
-#  ----------------------------
+# ----------------------------
 def strip_proppers(text):
     # first tokenize by sentence, then by word to ensure that punctuation is caught as it's own token
     tokens = [word for sent in nltk.sent_tokenize(text.decode('utf-8')) for word in nltk.word_tokenize(sent) if word.islower()]
@@ -57,6 +57,7 @@ def strip_proppers_POS(text):
     non_propernouns = [word for word,pos in tagged if pos != 'NNP' and pos != 'NNPS' and pos !='VB' and pos!='VBD'and pos!='VBG'and
     pos!='VBN'and pos!='VBP'and pos!='VBZ' and pos!='CD' and pos!='CC'and pos!='LS' and pos!='MD' and pos!='POS' and pos!='PDT' and pos!='DT' ]
     return non_propernouns
+#  ----------------------------
 
 #remove proper names
 preprocess = [strip_proppers(doc) for doc in synopses]
